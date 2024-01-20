@@ -1,7 +1,7 @@
 ---
 title: Single Cell RNA-Seq Analysis Example
 author: Andrew L. Stachyra
-output: html_notebook
+output: github_document
 ---
 
 # Objective
@@ -237,7 +237,8 @@ In this case, given we've concluded above that each cluster identified in our cl
 # Required step in order to run FinaAllMarkers()
 mrgobj <- JoinLayers(mrgobj)
 # Find all positive biomarkers for each cluster
-allmrk <- FindAllMarkers(mrgobj, only.pos=TRUE)
+allmrk <- FindAllMarkers(mrgobj, only.pos=TRUE) %>%
+          suppressMessages()
 # The above list is typically prohibitively long to try to visualize, so
 # cut it down to 10 biomarkers per cluster
 top10 <- group_by(allmrk, cluster) %>%
@@ -247,7 +248,8 @@ top10 <- group_by(allmrk, cluster) %>%
 # Make a heatmap that shows expression level vs. cell ID vs. biomarker vs.
 # cluster ID
 plt_diffexp <- DoHeatmap(mrgobj, features=top10$gene) +
-               scale_fill_viridis_c()
+               scale_fill_viridis_c() %>%
+               suppressWarnings()
 print(plt_diffexp)
 ```
 
