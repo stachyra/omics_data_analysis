@@ -5,4 +5,4 @@ This repository is intended to serve as a landing spot for tests, experiments, a
 
 Currently, the repository holds just one study:
 
-- **[scRNA_TCGA_brain_gliomas_Seurat.nb.html](scRNA_TCGA_brain_gliomas_Seurat/scRNA_TCGA_brain_gliomas_Seurat.nb.html):** An R notebook demonstrating use of the Seurat package to perform cell clusetering, biomarker identification, and differential expression analysis using single cell RNA-seq data downloaded from the TCGA project.
+- **[scRNA_TCGA_brain_gliomas_Seurat.md](scRNA_TCGA_brain_gliomas_Seurat/scRNA_TCGA_brain_gliomas_Seurat.md):** An R notebook demonstrating use of the Seurat package to perform cell clusetering, biomarker identification, and differential expression analysis using single cell RNA-seq data downloaded from the TCGA project.
