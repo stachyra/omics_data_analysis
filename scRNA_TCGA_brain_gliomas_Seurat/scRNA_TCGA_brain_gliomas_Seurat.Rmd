@@ -36,7 +36,9 @@ smp_subset <- c('C3L-03405-01', 'C3N-03184-02', 'C3L-02705-71', 'C3N-01814-01',
                 'C3N-02784-01', 'C3N-02190-01')
 smpsht <- read_delim(sample_sheet, delim='\t',
                      show_col_types=FALSE) %>%
-          filter(`Sample ID` %in% smp_subset)
+          filter(`Sample ID` %in% smp_subset) %>%
+          mutate(`Sample ID`=factor(`Sample ID`, levels=smp_subset)) %>%
+          arrange(`Sample ID`)
 ```
 
 ## Step 2: Read Sample Files Into A List of Seurat Objects
@@ -107,7 +109,9 @@ And here's the same data in the right-most figure column below, but plotted usin
 
 ```{r, fig.asp=0.7, fig.width=10}
 # Grab the metadata data frame
-df <- mrgobj@meta.data
+df <- mrgobj@meta.data %>%
+      mutate(Sample_ID=factor(Sample_ID, levels=smp_subset)) %>%
+             arrange(Sample_ID)
 plt <- list()
 plt[["ncount"]] <- ggplot(data=df, aes(x=nCount_RNA)) +
                    geom_histogram(boundary=0, binwidth=20) +
@@ -132,6 +136,7 @@ cwplt <- plot_grid(plt[["ncount"]], plt[["nfeat"]], plt[["mt"]], ncol=3,
                    rel_widths=c(0.333, 0.333, 0.333))
 print(cwplt)
 ```
+
 One thing that immediately stands out about the above data is that the typical number of transcript counts (left column) across all six samples is usually only slightly larger than the number of features with non-zero count values (middle column).  This means that most features (i.e., gene transcript locations) will usually exhibit either zero or one counts per cell.  This suggests we're losing significant fidelity in terms of which transcripts are being expressed inside each individual cell: many cells will register a "0" across multiple transcripts that were actually being expressed within that cell, simply because the genomic coverage per cell was not sufficient to get all transcripts that were actually present up to the minimum observable count value of "1".
 
 The scatter plot below illustrates the relationship between the number of features and the number of counts observed in each cell.  It's approximately a 1-to-1 relationship; i.e., if a feature is observed in any given cell, most of the time it has just one transcript count associated with it.
@@ -173,7 +178,8 @@ top10 <- HVFInfo(mrgobj, status=TRUE) %>%
          filter(variable==TRUE & rank<=10) %>%
          rownames()
 pltfeatvar <- VariableFeaturePlot(mrgobj) %>%
-              LabelPoints(points=top10, repel=TRUE, xnudge=0, ynudge=0)
+              LabelPoints(points=top10, repel=TRUE, xnudge=0, ynudge=0) %>%
+              suppressMessages()
 print(pltfeatvar)
 ```
 

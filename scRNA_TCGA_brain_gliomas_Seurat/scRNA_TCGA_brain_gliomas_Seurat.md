@@ -51,7 +51,9 @@ smp_subset <- c('C3L-03405-01', 'C3N-03184-02', 'C3L-02705-71', 'C3N-01814-01',
                 'C3N-02784-01', 'C3N-02190-01')
 smpsht <- read_delim(sample_sheet, delim='\t',
                      show_col_types=FALSE) %>%
-          filter(`Sample ID` %in% smp_subset)
+          filter(`Sample ID` %in% smp_subset) %>%
+          mutate(`Sample ID`=factor(`Sample ID`, levels=smp_subset)) %>%
+          arrange(`Sample ID`)
 ```
 
 ## Step 2: Read Sample Files Into A List of Seurat Objects
@@ -130,9 +132,9 @@ VlnPlot(mrgobj, features=c("percent.mt"), alpha=0.02, layer="counts",
         y.max=20)
 ```
 
-    ## Warning: Removed 925 rows containing non-finite values (`stat_ydensity()`).
+    ## Warning: Removed 926 rows containing non-finite values (`stat_ydensity()`).
 
-    ## Warning: Removed 925 rows containing missing values (`geom_point()`).
+    ## Warning: Removed 926 rows containing missing values (`geom_point()`).
 
 ![](scRNA_TCGA_brain_gliomas_Seurat_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
 
@@ -149,7 +151,9 @@ cutoffs rather loosely.
 
 ``` r
 # Grab the metadata data frame
-df <- mrgobj@meta.data
+df <- mrgobj@meta.data %>%
+      mutate(Sample_ID=factor(Sample_ID, levels=smp_subset)) %>%
+             arrange(Sample_ID)
 plt <- list()
 plt[["ncount"]] <- ggplot(data=df, aes(x=nCount_RNA)) +
                    geom_histogram(boundary=0, binwidth=20) +
@@ -176,6 +180,7 @@ print(cwplt)
 ```
 
 ![](scRNA_TCGA_brain_gliomas_Seurat_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+
 One thing that immediately stands out about the above data is that the
 typical number of transcript counts (left column) across all six samples
 is usually only slightly larger than the number of features with
@@ -243,11 +248,12 @@ top10 <- HVFInfo(mrgobj, status=TRUE) %>%
          filter(variable==TRUE & rank<=10) %>%
          rownames()
 pltfeatvar <- VariableFeaturePlot(mrgobj) %>%
-              LabelPoints(points=top10, repel=TRUE, xnudge=0, ynudge=0)
+              LabelPoints(points=top10, repel=TRUE, xnudge=0, ynudge=0) %>%
+              suppressMessages()
 print(pltfeatvar)
 ```
 
-    ## Warning: Removed 5442 rows containing missing values (`geom_point()`).
+    ## Warning: Removed 5644 rows containing missing values (`geom_point()`).
 
 ![](scRNA_TCGA_brain_gliomas_Seurat_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
