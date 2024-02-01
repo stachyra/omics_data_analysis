@@ -111,7 +111,7 @@ And here's the same data in the right-most figure column below, but plotted usin
 # Grab the metadata data frame
 df <- mrgobj@meta.data %>%
       mutate(Sample_ID=factor(Sample_ID, levels=smp_subset)) %>%
-             arrange(Sample_ID)
+      arrange(Sample_ID)
 plt <- list()
 plt[["ncount"]] <- ggplot(data=df, aes(x=nCount_RNA)) +
                    geom_histogram(boundary=0, binwidth=20) +
@@ -152,12 +152,42 @@ print(plt_fvsc)
 
 ## Step 5: Apply QC Thresholds and Normalize Count Data
 
-The QC thresholds defined above allow us to discard "outlier" cells in which something abnormal may be happening either with the cell itself, or with the assay procedure.  After unwanted cells are discarded, the count data in each cell is normalized so that individual cells have approximately equal effective weight, in terms of the total number of transcripts per cell.
+The QC thresholds defined above allow us to discard "outlier" cells in which something abnormal may be happening either with the cell itself, or with the assay procedure.  After unwanted cells are discarded, the count data in each cell is normalized.  The normalization step is not well justified from a statistical theory perspective in my opinion, but ultimately it has the effect of diminishing the weight of any high count outlier transcripts within the remaining "normal-looking" cells that have passed the initial QC filter. 
+
+The `NormalizeData()` function offers multiple normalization methods.  In the default method (used here), the total transcript count is summed for each cell, then the counts are divided by this sum and multiplied by an arbitrary scale factor (default is 10000), and the result is rescaled by `log1p()`.  So, for example, if `cell_count` were a vector representing the transcript counts of one cell (i.e., one column in the sparse matix count data that we read in above), then the default normalization transformation would be equivalent to `cell_count_transformed <- log1p(10000 * cell_count / sum(cell_count))`
+
+Some of the normalization design choices made by the Seurat package authors seem a bit arbitrary; for example, the default scale factor is set to 10000, however that number is not well grounded in any theoretical understanding of the physical and cellular processes that govern single cell RNA-seq experiments--it's just a number.  Similarly, the normalization equation written down above does not seem to be derived from any first principles, and indeed, the package offers other models to choose from, but it's not clear how to determine which one is best.  Regardless, for purposes of conducting this exercise, we simply accept the defaults and move on:
 
 ```{r}
 mrgobj <- subset(mrgobj, subset = nFeature_RNA < 800 & percent.mt < 10)
 mrgobj <- NormalizeData(mrgobj, verbose=FALSE)
 ```
+
+Internally, the Seurat implementation saves the raw transcript count data for each `Sample ID` in a series of sparse matrices labeled `counts.1`, `counts.2`, `counts.3`, etc.  The output of the `NormalizeData()` function is saved in an equivalent set of sparse matrices labeled `data.1`, `data.2`, `data.3`, etc..  It's helpful to visualize the relationship between these two.  In the plots below, the raw transcript count values from all transcripts across all cells are shown as a series of discrete integer columns.  In practice, the transformed value that may be assigned to a given transcript count depends upon the total number of other transcripts found in the same cell, so each integer count value column along the horizontal axis results in a range of possible transformed values along the vertical axis.
+
+```{r, fig.asp=0.7, fig.width=10}
+dfdvsc <- list()
+for(ii in seq(6)) {
+  # Extract non-zero elements from counts and data sparse matrices into a list
+  # of data frames
+  dfdvsc[[ii]] <- tibble(counts=summary(mrgobj@assays$RNA@layers[[paste0("counts.", ii)]])$x,
+                         data=summary(mrgobj@assays$RNA@layers[[paste0("data.", ii)]])$x,
+                         Sample_ID=smp_subset[ii]) %>%
+                  arrange(counts, data) %>%
+                  unique()
+}
+# Concatenate list of tibbles into a single tibble
+dfdvsc <- bind_rows(dfdvsc) %>%
+          mutate(Sample_ID=factor(Sample_ID, levels=smp_subset)) %>%
+          arrange(Sample_ID, counts, data)
+pltdvsc <- ggplot(dfdvsc) +
+           geom_point(aes(x=counts, y=data), size=0.5) +
+           facet_wrap(~Sample_ID, ncol=2) +
+           coord_cartesian(xlim=c(0,80))
+print(pltdvsc)
+```
+
+The key point here is that the transcript count values that are found far to the right along the horizontal axis (i.e., so-called "outliers") end up being substantially attenuated by the normalization transformation, which is plotted along the vertical axis.  For example, whereas a value of  `counts=1` may be assigned a final transformed `data` value roughly in a range between 2-4.5 along the vertical axis, a value of `counts=20` takes on a final transformed `data` value within a range of 5-7, only slightly larger even though the input values are a factor of 20 different from one another.
 
 ## Step 6: Find Variable Feaures
 
@@ -226,7 +256,9 @@ In this analysis, something unexpected seems to have happened.  Each of the 6 pa
 
 ```{r, fig.asp=0.7, fig.width=10}
 # Grab metadata data frame again
-df <- mrgobj@meta.data
+df <- mrgobj@meta.data %>%
+      mutate(Sample_ID=factor(Sample_ID, levels=smp_subset)) %>%
+      arrange(Sample_ID)
 plt_smpvscl <- ggplot(df) +
                geom_bar(aes(x=seurat_clusters, fill=seurat_clusters)) +
                facet_wrap(~Sample_ID, nrow=3)
